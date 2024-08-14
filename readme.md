@@ -1,4 +1,4 @@
-# Athena To HiPerGator (Automation)
+# Athena To HiPerGator Metadata-CSV (Automation)
 
 ## Description
 This repo helps in automating the transfer of usermetada from anthena to HiPerGator. It has one python file executables "Metadata.py" which when executed transfers all the user metadata content from athena/devathena to HiPerGator. 
