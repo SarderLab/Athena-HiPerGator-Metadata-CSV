@@ -12,15 +12,12 @@ def remove_all_extensions(filename):
     print(f"Filename after removing extensions: {filename}")
     return filename
 
-def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, UserOrCollectionIDs=None, folderIDs=None):
-    print(f"Starting download_user_meta_data with api_url={api_url}, dest_root_dir={dest_root_dir}")
+def download_metadata(api_url, api_key, dest_root_dir, log_file, cookie, UserOrCollectionIDs=None, folderIDs=None, metadata_types=None):
+    print(f"Starting download_metadata with api_url={api_url}, dest_root_dir={dest_root_dir}")
     json_file_path = os.path.join(dest_root_dir, 'logs', 'tracking_data.json')
-
-    # Log files
-    user_metadata_log = os.path.join(dest_root_dir, 'logs', 'user_meta_data_log.txt')
+    metadata_log = os.path.join(dest_root_dir, 'logs', 'metadata_log.txt')
     tracking_data = {}
 
-    # Check if the JSON file exists
     if os.path.exists(json_file_path):
         print(f"Loading existing tracking data from {json_file_path}")
         with open(json_file_path, 'r') as json_file:
@@ -30,12 +27,10 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
         gc = girder_client.GirderClient(apiUrl=api_url)
         print("GirderClient initialized.")
 
-        # Creating session to add cookie for dev athena
         with gc.session() as session:
             with open(os.path.join(dest_root_dir, 'logs', log_file), "a") as log:
                 print("Session started and log file opened.")
 
-                # Authenticate user
                 try:
                     if cookie:
                         session.headers.update({'Cookie': f'auth_tkt={cookie}'})
@@ -51,32 +46,26 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
                 all_base_parents = []
                 folder_name = None
 
-                # Process multiple folderIDs if provided
                 if folderIDs:
                     folderIDs = folderIDs.split(',')
                     for folderID in folderIDs:
                         print(f"Fetching all items under the given folderID: {folderID}")
                         try:
-                            # Fetch all items under the given folderID
                             folder_items = list(gc.listItem(folderID))
                             print(f"Got all items in the folder: {len(folder_items)} items found.")
 
-                            # Get the folder name for directory creation
                             folder_info = gc.getFolder(folderID)
                             folder_name = folder_info['name']
                             print(f"Folder name retrieved: {folder_name}")
 
-                            # Create a separate folder for each folderID
                             path_without_file = os.path.join(dest_root_dir, folder_name)
                             os.makedirs(path_without_file, exist_ok=True)
                             print(f"Directory created for folderID {folderID}: {path_without_file}")
 
-                            # Process items
                             for item in folder_items:
                                 item_id = item['_id']
                                 print(f"Processing item: {item_id} - {item['name']}")
 
-                                # Get Item Path
                                 try:
                                     item_path = gc.get(f"/resource/{item_id}/path?type=item")
                                     print(f"Retrieved item path: {item_path}")
@@ -85,35 +74,72 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
                                     log.write(f"Error item_path {item_id}: {item['name']} {e}\n")
                                     continue
 
-                                # Retrieve metadata from the item
-                                item_user_meta = item.get('meta')
-                                if item_user_meta:
-                                    print(f"User metadata found for item: {item_id}")
+                                item_metadata = {}
 
-                                    # Tracking each item that is retrieved
-                                    tracking_data[item_id] = {'user_metadata': []}
+                                if 'user_metadata' in metadata_types:
+                                    item_user_meta = item.get('meta')
+                                    if item_user_meta:
+                                        print(f"User metadata found for item: {item_id}")
+                                        item_metadata['user_metadata'] = item_user_meta
 
-                                    file_name = item['name']
-                                    file_name_without_extensions = remove_all_extensions(file_name)
-                                    print(f"File name without extensions: {file_name_without_extensions}")
-
+                                if 'annotations' in metadata_types:
                                     try:
-                                        user_meta_path = os.path.join(path_without_file, 'UserMetaData')
-                                        os.makedirs(user_meta_path, exist_ok=True)
-                                        print(f"Directory created: {user_meta_path}")
-                                        file_path = os.path.join(user_meta_path, file_name_without_extensions + '.json')
-                                        print(f"Saving metadata to: {file_path}")
-                                        with open(file_path, 'w') as json_file:
-                                            json.dump(item_user_meta, json_file)
-                                        tracking_data[item_id]['user_metadata'].append(item_id)
-                                        print(f"Metadata saved and tracking data updated for item: {item_id}")
-                                        with open(user_metadata_log, "a") as user_log:
-                                            user_log.write(item_path + '\n')
+                                        item_annotations = gc.get(f"annotation/item/{item_id}")
+                                        print(f"Annotations found for item: {item_id}")
+                                        item_metadata['annotations'] = item_annotations
                                     except Exception as e:
-                                        print(f"Error saving metadata for {item_id}: {e}")
-                                        log.write(f"[Saving User MetaData] {item_id}: {item['name']} {e}\n")
+                                        print(f"Error retrieving annotations for {item_id}: {e}")
+                                        log.write(f"[Annotation] GET {item_id}: {item['name']} {e}\n")
 
-                                    # Write tracking data to a JSON file
+                                if 'large_image_metadata' in metadata_types:
+                                    item_large_image_metadata = False
+                                    if item.get('largeImage'):
+                                        try:
+                                            item_large_image_metadata = gc.get(f"item/{item_id}/tiles")
+                                            print(f"Large image metadata found for item: {item_id}")
+                                            item_metadata['large_image_metadata'] = item_large_image_metadata
+                                        except Exception as e:
+                                            print(f"Error retrieving large image metadata for {item_id}: {e}")
+                                            log.write(f"[Large Image] GET {item_id}: {item['name']} {e}\n")
+
+                                if item_metadata:
+                                    # Only create a JSON file if the metadata is not empty
+                                    if any(item_metadata.values()):
+                                        tracking_data[item_id] = item_metadata
+
+                                        file_name = item['name']
+                                        file_name_without_extensions = remove_all_extensions(file_name)
+                                        print(f"File name without extensions: {file_name_without_extensions}")
+
+                                        try:
+                                            if 'annotations' in metadata_types and item_metadata.get('annotations'):
+                                                metadata_path = os.path.join(path_without_file, 'Annotations')
+                                                os.makedirs(metadata_path, exist_ok=True)
+                                                file_path = os.path.join(metadata_path, file_name_without_extensions + '.json')
+                                                print(f"Saving annotations metadata to: {file_path}")
+                                            elif 'large_image_metadata' in metadata_types and item_metadata.get('large_image_metadata'):
+                                                metadata_path = os.path.join(path_without_file, 'LargeImageMetadata')
+                                                os.makedirs(metadata_path, exist_ok=True)
+                                                file_path = os.path.join(metadata_path, file_name_without_extensions + '.json')
+                                                print(f"Saving large image metadata to: {file_path}")
+                                            elif 'user_metadata' in metadata_types and item_metadata.get('user_metadata'):
+                                                metadata_path = os.path.join(path_without_file, 'UserMetadata')
+                                                os.makedirs(metadata_path, exist_ok=True)
+                                                file_path = os.path.join(metadata_path, file_name_without_extensions + '.json')
+                                                print(f"Saving user metadata to: {file_path}")
+
+                                            with open(file_path, 'w') as json_file:
+                                                json.dump(item_metadata, json_file)
+                                            print(f"Metadata saved and tracking data updated for item: {item_id}")
+                                            with open(metadata_log, "a") as user_log:
+                                                user_log.write(item_path + '\n')
+                                        except Exception as e:
+                                            print(f"Error saving metadata for {item_id}: {e}")
+                                            log.write(f"[Saving Metadata] {item_id}: {item['name']} {e}\n")
+                                    else:
+                                        print(f"No relevant metadata for item {item_id}. Skipping file creation.")
+
+
                                     with open(json_file_path, 'w') as json_file:
                                         json.dump(tracking_data, json_file, indent=4)
                                         print(f"Tracking data updated in JSON file.")
@@ -122,19 +148,16 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
                             print(f"Error fetching items for folderID {folderID}: {e}")
                             log.write(f"Error fetching items for folderID {folderID}: {e}\n")
 
-                # Process multiple UserOrCollectionIDs if provided
                 if UserOrCollectionIDs:
                     UserOrCollectionIDs = UserOrCollectionIDs.split(',')
                     print(f"Fetching all items, users, and collections for UserOrCollectionIDs: {UserOrCollectionIDs}")
                     try:
-                        # Fetch all items, users, and collections
                         all_items = gc.get(f'item/query?query={{}}&limit=0')
                         all_users = list(gc.listUser())
                         all_collections = list(gc.listCollection())
                         all_base_parents = all_users + all_collections
                         print('Got all details.')
 
-                        # Filter based on UserOrCollectionIDs
                         print(f"Filtering based on UserOrCollectionIDs: {UserOrCollectionIDs}")
                         all_base_parents = [base_parent for base_parent in all_base_parents if base_parent['_id'] in UserOrCollectionIDs]
                         all_items = [item for item in all_items if item['baseParentId'] in UserOrCollectionIDs]
@@ -143,13 +166,11 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
                         print(f"Error fetching users/collections: {e}")
                         log.write(f"Error fetching users/collections: {e}\n")
 
-                    # Iterate over each item and get associated user metadata
                     try:
                         for item in all_items:
                             item_id = item['_id']
                             print(f"Processing item: {item_id} - {item['name']}")
 
-                            # Get Item Path
                             try:
                                 item_path = gc.get(f"/resource/{item_id}/path?type=item")
                                 print(f"Retrieved item path: {item_path}")
@@ -158,19 +179,40 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
                                 log.write(f"Error item_path {item_id}: {item['name']} {e}\n")
                                 continue
 
-                            # Retrieve metadata from the item
-                            item_user_meta = item.get('meta')
-                            if item_user_meta:
-                                print(f"User metadata found for item: {item_id}")
+                            item_metadata = {}
 
-                                # Tracking each item that is retrieved
-                                tracking_data[item_id] = {'user_metadata': []}
+                            if 'user_metadata' in metadata_types:
+                                item_user_meta = item.get('meta')
+                                if item_user_meta:
+                                    print(f"User metadata found for item: {item_id}")
+                                    item_metadata['user_metadata'] = item_user_meta
 
-                                # Original logic for UserOrCollectionID
+                            if 'annotations' in metadata_types:
+                                try:
+                                    item_annotations = gc.get(f"annotation/item/{item_id}")
+                                    print(f"Annotations found for item: {item_id}")
+                                    item_metadata['annotations'] = item_annotations
+                                except Exception as e:
+                                    print(f"Error retrieving annotations for {item_id}: {e}")
+                                    log.write(f"[Annotation] GET {item_id}: {item['name']} {e}\n")
+
+                            if 'large_image_metadata' in metadata_types:
+                                item_large_image_metadata = False
+                                if item.get('largeImage'):
+                                    try:
+                                        item_large_image_metadata = gc.get(f"item/{item_id}/tiles")
+                                        print(f"Large image metadata found for item: {item_id}")
+                                        item_metadata['large_image_metadata'] = item_large_image_metadata
+                                    except Exception as e:
+                                        print(f"Error retrieving large image metadata for {item_id}: {e}")
+                                        log.write(f"[Large Image] GET {item_id}: {item['name']} {e}\n")
+
+                            if item_metadata:
+                                tracking_data[item_id] = item_metadata
+
                                 item_associated_parent = next(
                                     (item_parent for item_parent in all_base_parents if item['baseParentId'] == item_parent['_id']), None)
 
-                                # Handle the case where no associated parent is found
                                 if item_associated_parent is None:
                                     print(f"No associated parent found for item {item_id}, skipping.")
                                     continue
@@ -193,22 +235,31 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
                                 print(f"File name without extensions: {file_name_without_extensions}")
 
                                 try:
-                                    user_meta_path = os.path.join(path_without_file, 'UserMetaData')
-                                    os.makedirs(user_meta_path, exist_ok=True)
-                                    print(f"Directory created: {user_meta_path}")
-                                    file_path = os.path.join(user_meta_path, file_name_without_extensions + '.json')
-                                    print(f"Saving metadata to: {file_path}")
+                                    if 'annotations' in metadata_types:
+                                        metadata_path = os.path.join(path_without_file, 'Annotations')
+                                        os.makedirs(metadata_path, exist_ok=True)
+                                        file_path = os.path.join(metadata_path, file_name_without_extensions + '.json')
+                                        print(f"Saving annotations metadata to: {file_path}")
+                                    elif 'large_image_metadata' in metadata_types:
+                                        metadata_path = os.path.join(path_without_file, 'LargeImageMetadata')
+                                        os.makedirs(metadata_path, exist_ok=True)
+                                        file_path = os.path.join(metadata_path, file_name_without_extensions + '.json')
+                                        print(f"Saving large image metadata to: {file_path}")
+                                    else:
+                                        metadata_path = os.path.join(path_without_file, 'UserMetadata')
+                                        os.makedirs(metadata_path, exist_ok=True)
+                                        file_path = os.path.join(metadata_path, file_name_without_extensions + '.json')
+                                        print(f"Saving user metadata to: {file_path}")
+
                                     with open(file_path, 'w') as json_file:
-                                        json.dump(item_user_meta, json_file)
-                                    tracking_data[item_id]['user_metadata'].append(item_id)
+                                        json.dump(item_metadata, json_file)
                                     print(f"Metadata saved and tracking data updated for item: {item_id}")
-                                    with open(user_metadata_log, "a") as user_log:
+                                    with open(metadata_log, "a") as user_log:
                                         user_log.write(item_path + '\n')
                                 except Exception as e:
                                     print(f"Error saving metadata for {item_id}: {e}")
-                                    log.write(f"[Saving User MetaData] {item_id}: {item['name']} {e}\n")
+                                    log.write(f"[Saving Metadata] {item_id}: {item['name']} {e}\n")
 
-                                # Write tracking data to a JSON file
                                 with open(json_file_path, 'w') as json_file:
                                     json.dump(tracking_data, json_file, indent=4)
                                     print(f"Tracking data updated in JSON file.")
@@ -222,12 +273,14 @@ def download_user_meta_data(api_url, api_key, dest_root_dir, log_file, cookie, U
 
 def chooseInstance():
     print("Parsing command line arguments.")
-    # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Download user metadata.')
+    parser = argparse.ArgumentParser(description='Download metadata.')
     parser.add_argument('instance', type=str, help='Instance name (e.g., athena, devathena)')
     parser.add_argument('--UserOrCollection', type=str, help='Comma-separated list of UserOrCollectionIDs')
     parser.add_argument('--folder', type=str, help='Comma-separated list of FolderIDs')
     parser.add_argument('--dest', type=str, default=os.getcwd(), help='Optional destination directory to save the output')
+    parser.add_argument('--user_metadata', action='store_true', help='Download user metadata')
+    parser.add_argument('--large_image_metadata', action='store_true', help='Download large image metadata')
+    parser.add_argument('--annotations', action='store_true', help='Download annotations')
 
     args = parser.parse_args()
 
@@ -235,8 +288,21 @@ def chooseInstance():
     UserOrCollectionIDs = args.UserOrCollection
     folderIDs = args.folder
     dest_dir = args.dest
-    print(f"Arguments received - instance: {instance}, UserOrCollection: {UserOrCollectionIDs}, folder: {folderIDs}, dest: {dest_dir}")
-    err_log = 'error_log_UserMeta.txt'
+    metadata_types = []
+
+    if args.user_metadata:
+        metadata_types.append('user_metadata')
+    if args.large_image_metadata:
+        metadata_types.append('large_image_metadata')
+    if args.annotations:
+        metadata_types.append('annotations')
+
+    if not metadata_types:
+        print("No metadata type specified. Use --user_metadata, --large_image_metadata, or --annotations.")
+        sys.exit(1)
+
+    print(f"Arguments received - instance: {instance}, UserOrCollection: {UserOrCollectionIDs}, folder: {folderIDs}, dest: {dest_dir}, metadata_types: {metadata_types}")
+    err_log = 'error_log_Metadata.txt'
 
     print(f"Fetching URL and credentials for instance: {instance}")
     api_url, api_key, _, cookie, _ = common.urlAndCredentials(instance)
@@ -245,7 +311,7 @@ def chooseInstance():
     os.makedirs(os.path.join(dest_dir, 'logs'), exist_ok=True)
     print(f"Logs directory created or already exists: {os.path.join(dest_dir, 'logs')}")
 
-    download_user_meta_data(api_url, api_key, dest_dir, err_log, cookie, UserOrCollectionIDs, folderIDs)
+    download_metadata(api_url, api_key, dest_dir, err_log, cookie, UserOrCollectionIDs, folderIDs, metadata_types)
 
 if __name__ == "__main__":
     print("Starting script execution.")
