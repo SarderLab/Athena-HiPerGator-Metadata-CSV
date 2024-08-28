@@ -25,4 +25,4 @@ else
 fi
 
 
-python annotations_user_large_metadata.py $@
+python file_metadata_annotation.py $@
