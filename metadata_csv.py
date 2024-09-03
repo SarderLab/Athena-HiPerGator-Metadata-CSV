@@ -24,12 +24,15 @@ def main():
                     json_data = json.load(f)
                 print(f"Successfully loaded JSON data from file: {json_file}")
 
+                # Access the 'user_metadata' section
+                user_metadata = json_data.get('user_metadata', {})
+
                 # Extract the QC data with default "N/A" if key is missing
-                gloms_qc = json_data.get('gloms_qc', 'N/A')
-                muscular_vessels_qc = json_data.get('muscular_vessels_qc', 'N/A')
-                tubules_qc = json_data.get('tubules_qc', 'N/A')
-                ptc_qc = json_data.get('ptc_qc', 'N/A')
-                ifta_qc = json_data.get('ifta_qc', 'N/A')
+                gloms_qc = user_metadata.get('gloms_qc', 'N/A')
+                muscular_vessels_qc = user_metadata.get('muscular_vessels_qc', 'N/A')
+                tubules_qc = user_metadata.get('tubules_qc', 'N/A')
+                ptc_qc = user_metadata.get('ptc_qc', 'N/A')  # Assuming this could be in user_metadata
+                ifta_qc = user_metadata.get('ifta_qc', 'N/A')
 
                 print(f"Extracted QC data for file: {json_file}")
                 data.append({
