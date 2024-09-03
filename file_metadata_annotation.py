@@ -11,7 +11,7 @@ def remove_all_extensions(filename):
     print(f"Filename after removing extensions: {filename}")
     return filename
 
-def download_metadata(api_url, api_key, dest_root_dir, log_file, cookie, UserOrCollectionIDs=None, folderIDs=None, metadata_types=None):
+def download_metadata(api_url, api_key, dest_root_dir, log_file, cookie, folderIDs=None, metadata_types=None):
     print(f"Starting download_metadata with api_url={api_url}, dest_root_dir={dest_root_dir}")
     json_file_path = os.path.join(dest_root_dir, 'logs', 'tracking_data.json')
     metadata_log = os.path.join(dest_root_dir, 'logs', 'metadata_log.txt')
