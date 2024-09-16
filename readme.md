@@ -56,3 +56,29 @@ Audit logs: <br/>
     [Metadata] user_meta_data_log.txt <br/>
 
 
+### Commnad to run 
+To download annotations of a specific folder
+
+```
+python annotations_user_large_metadata.py athena --folder <Folder ID> --annotations --dest /path/to/destination
+```
+
+To download user metadata of a specific folder
+
+```
+python annotations_user_large_metadata.py athena --folder <Folder ID> --user_metadata --dest /path/to/destination
+```
+To download user large image metadata of a specific folder
+
+```
+python annotations_user_large_metadata.py athena --folder <Folder ID> --large_image_metadata --dest /path/to/destination
+```
+
+To download only files of a specific folder
+
+```
+python annotations_user_large_metadata.py athena --folder <Folder ID> --file --dest /path/to/destination
+```
+
+
+
