@@ -55,7 +55,8 @@ def download_metadata(api_url, api_key, dest_root_dir, log_file, cookie, folderI
                             folder_name = folder_info['name']
                             print(f"Folder name retrieved: {folder_name}")
 
-                            path_without_file = os.path.join(dest_root_dir, folder_name)
+                            # path_without_file = os.path.join(dest_root_dir, folder_name)
+                            path_without_file = os.path.join(dest_root_dir)
                             os.makedirs(path_without_file, exist_ok=True)
                             print(f"Directory created for folderID {folderID}: {path_without_file}")
 
