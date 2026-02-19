@@ -1,0 +1,44 @@
+Step 1:
+python file_metadata_annotation.py athena --folder 659eb5acbd96faac30eb2350 --user_metadata --dest /orange/pinaki.sarder/anish.tatke/MetadataCSV
+
+Step 2:
+python metadata_csv.py /orange/pinaki.sarder/anish.tatke/MetadataCSV/Batch2/UserMetadata /orange/pinaki.sarder/anish.tatke/MetadataCSV/output.csv
+
+Not on Login Node, instead run on: 
+srun --nodes=1 --ntasks=1 --cpus-per-task=2 --mem=8gb --time=2:00:00 --pty bash -i
+
+
+Steps to filter out the NA values for all the 5 columns in the csv file:
+    Select your data (click anywhere inside it).
+    Go to the "Data" tab → click "Filter" (this will add dropdown arrows on the column headers).
+    For each of the 5 specific columns:
+        Click the dropdown.
+        Uncheck everything except for "N/A".
+    After filtering all 5 columns, you should now see only rows where each of those 5 columns is "N/A".
+    Select those filtered rows, right-click, and choose "Delete Row".
+    Then, remove the filter (Data → Filter again).
+
+Task:
+Batch #2:
+Step 1:
+python file_metadata_annotation.py athena --folder 659eb5acbd96faac30eb2350 --user_metadata --dest /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch2
+Step 2:
+python metadata_csv.py /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch2/UserMetadata /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch2/output_batch2.csv
+
+Batch #3:
+Step 1:
+python file_metadata_annotation.py athena --folder 66229fb7d2f45e99a9665ce8 --user_metadata --dest /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch3
+Step 2:
+python metadata_csv.py /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch3/UserMetadata /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch3/output_batch3.csv
+
+Batch #4:
+Step 1:
+python file_metadata_annotation.py athena --folder 66a947400519743b26616879 --user_metadata --dest /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch4
+Step 2:
+python metadata_csv.py /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch4/UserMetadata /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch4/output_batch4.csv
+
+Batch #5:
+Step 1:
+python file_metadata_annotation.py athena --folder 6807da43c56fde7f6a804214 --user_metadata --dest /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch5
+Step 2:
+python metadata_csv.py /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch5/UserMetadata /orange/pinaki.sarder/Davy_Jones_Locker/KPMP/KPMP_QC_Metadata/8_25_2025/DX_Batch5/output_batch5.csv
